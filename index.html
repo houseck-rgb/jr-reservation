@@ -382,15 +382,77 @@ function guestMsg(r){
   const [y,m,d]=r.date.split('-').map(Number),dw=DOW[new Date(y,m-1,d).getDay()];
   return `안녕하세요. ${STORE}입니다.\n${r.name}님, 예약 확인했습니다.\n`+
     `${m}월 ${d}일(${dw}) ${fmtTime(r.time)}, ${r.pax}명으로 예약해드렸습니다.\n`+
-    (tbs(r).length?`${stx(tbs(r),', ')} 자리로 준비해두겠습니다.\n`:`자리 미리 준비해두겠습니다.\n`)+
+    (tbs(r).length?`${stx(tbs(r),', ')}(사진 참고)로 준비해두겠습니다.\n`:`자리 미리 준비해두겠습니다.\n`)+
     `\n인원이나 일정에 변동이 있으시면 연락 부탁드립니다.\n정성껏 준비하겠습니다. 감사합니다.`;
 }
-function sendGuest(r){
+/* 좌석 이미지 (문자·직원 공유용) */
+function rrect(x,X,Y,W,H,R){x.beginPath();if(x.roundRect)x.roundRect(X,Y,W,H,R);else x.rect(X,Y,W,H)}
+function fit(x,t,w){t=String(t);while(t.length>1&&x.measureText(t).width>w)t=t.slice(0,-1);return t}
+async function floorFile(date,focus,staff,fname){
+  try{await document.fonts.ready}catch(e){}
+  const F="'Jua','Gowun Dodum',sans-serif",HD=staff?190:250,FT=80,c=document.createElement('canvas');
+  c.width=FW;c.height=HD+FH+FT;const x=c.getContext('2d');
+  x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.textAlign='center';x.textBaseline='middle';
+  const day=list.filter(r=>r.date===date).sort((a,b)=>(a.time||'99').localeCompare(b.time||'99'));
+  if(staff){
+    x.fillStyle='#D97757';x.font=`44px ${F}`;x.fillText('🍣 최우영스시야 종로 예약석',FW/2,60);
+    x.fillStyle='#22171f';x.font=`62px ${F}`;x.fillText(`${fmtDate(date)} · ${day.length}팀 ${day.reduce((s,r)=>s+(+r.pax||0),0)}명`,FW/2,135);
+  }else{
+    x.fillStyle='#D97757';x.font=`40px ${F}`;x.fillText('최우영스시야 종로 · 예약석 안내',FW/2,54);
+    x.fillStyle='#22171f';x.font=`66px ${F}`;x.fillText(`${fmtDate(focus.date).replace(/ (오늘|내일)$/,'')} ${fmtTime(focus.time)}`,FW/2,130);
+    x.font=`46px ${F}`;x.fillText(fit(x,`${focus.name}님 ${focus.pax}명 · ${stx(tbs(focus),', ')}`,FW-60),FW/2,200);
+  }
+  x.save();x.translate(0,HD);
+  x.fillStyle='#fafafa';rrect(x,6,0,FW-12,FH,36);x.fill();x.strokeStyle='#e5e5e5';x.lineWidth=3;x.stroke();
+  /* 바 테이블 · 통로 · 입구 */
+  x.fillStyle='#f3ebe0';rrect(x,462,245,126,665,20);x.fill();x.strokeStyle='#e2cdb4';x.lineWidth=4;x.stroke();
+  x.fillStyle='#8a6d4f';x.font=`44px ${F}`;['바','','테','이','블'].forEach((ch,i)=>ch&&x.fillText(ch,525,460+i*50));
+  x.setLineDash([12,10]);x.strokeStyle='#cfc2c8';x.lineWidth=4;rrect(x,20,382,150,130,16);x.stroke();x.setLineDash([]);
+  x.fillStyle='#9a8a92';x.font=`36px ${F}`;x.fillText('통로',95,449);
+  x.fillStyle='#2f8f4e';rrect(x,790,995,195,70,16);x.fill();x.fillStyle='#fff';x.font=`34px ${F}`;x.fillText('⬇ 매장 입구',887,1032);
+  const at={};day.forEach(r=>(r.tables||[]).forEach(t=>(at[t]=at[t]||[]).push(r)));
+  Object.keys(SEATS).forEach(k=>{const n=+k,[X,Y,W,H]=SEATS[k],bar=n>100,rs=at[n]||[],
+    mine=focus&&rs.some(r=>r.id===focus.id),other=rs.length&&!mine,hot=mine||(staff&&other),cx=X+W/2,cy=Y+H/2;
+    if(bar){x.beginPath();x.arc(cx,cy,W/2,0,Math.PI*2)}else rrect(x,X,Y,W,H,20);
+    x.fillStyle=hot?'#D97757':other?'#e6e6e6':'#fff';x.fill();
+    x.lineWidth=hot?7:3;x.strokeStyle=hot?'#B5532F':other?'#cfcfcf':(bar?'#9fb4e6':'#e2c4cf');x.stroke();
+    const num=bar?String(n-100):String(n);
+    if(staff&&other){
+      if(bar){x.fillStyle='#fff';x.font=`30px ${F}`;x.fillText(num,cx,cy-14);x.font=`19px ${F}`;x.fillText(rs[0].time||'',cx,cy+16);
+        x.textAlign=n<=106?'left':'right';x.fillStyle='#B5532F';x.font=`22px ${F}`;x.fillText(fit(x,rs[0].name,110),n<=106?X+W+8:X-8,cy);x.textAlign='center';return}
+      x.fillStyle='rgba(255,255,255,.85)';x.font=`24px ${F}`;x.textAlign='left';x.fillText(num+'번',X+10,Y+22);x.textAlign='center';
+      x.fillStyle='#fff';x.font=`44px ${F}`;x.fillText(rs[0].time||'미정',cx,Y+H/2-6);
+      x.font=`24px ${F}`;x.fillText(fit(x,rs[0].name+(rs.length>1?` 외${rs.length-1}`:''),W-14),cx,Y+H/2+36);return;
+    }
+    x.fillStyle=hot?'#fff':other?'#a8a8a8':(bar?'#2c4a9a':'#c8283a');
+    if(bar){x.font=`38px ${F}`;x.fillText(num,cx,cy+2);return}
+    const lines=mine?['예약석']:other?['예약']:(CAP[n]?[CAP[n]+'인석']:[]);
+    x.font=`60px ${F}`;x.fillText(num,cx,lines.length?Y+H/2-14:Y+H/2+3);
+    x.font=`28px ${F}`;lines.forEach(l=>x.fillText(l,cx,Y+H/2+38));
+  });
+  x.restore();
+  const ly=HD+FH+FT/2;x.font=`30px ${F}`;x.textAlign='left';
+  const leg=staff?[['G','#B5532F','예약석 (시간 · 이름)'],['#fff','#e2c4cf','빈 자리']]:[['G','#B5532F','고객님 자리'],['#e6e6e6','#cfcfcf','다른 예약석']];
+  let lx=staff?200:240;leg.forEach(([bg,bd,t])=>{rrect(x,lx,ly-18,36,36,8);x.fillStyle=bg==='G'?'#D97757':bg;x.fill();x.strokeStyle=bd;x.lineWidth=4;x.stroke();x.fillStyle='#22171f';x.fillText(t,lx+48,ly+2);lx+=x.measureText(t).width+110});
+  const b=await new Promise(res=>c.toBlob(res,'image/png'));return b?new File([b],fname,{type:'image/png'}):null;
+}
+const canFiles=f=>!!(f&&navigator.canShare&&navigator.canShare({files:[f]}));
+async function sendGuest(r){
   if(!r)return;const tel=(r.tel||'').replace(/\D/g,''),text=guestMsg(r);
+  const f=tbs(r).length?await floorFile(r.date,r,false,'자리안내.png'):null;
+  if(canFiles(f)){
+    if(tel){try{await navigator.clipboard.writeText(tel)}catch(e){}toast('📱 번호 복사됨 · 메시지에서 받는 사람에 붙여넣기')}
+    try{await navigator.share({files:[f],text})}catch(e){}return}
   if(tel){location.href='sms:'+tel+(/iPhone|iPad|iPod/i.test(navigator.userAgent)?'&':'?')+'body='+encodeURIComponent(text);return}
   share(text);
 }
-function shareDay(date){const t=msgDay(date);if(t)share(t)}
+async function shareDay(date){
+  const t=msgDay(date);if(!t)return;
+  const f=await floorFile(date,null,true,'종로_예약석_'+date+'.png');
+  if(canFiles(f)){try{await navigator.clipboard.writeText(t)}catch(e){}
+    try{await navigator.share({files:[f],text:t});toast('글은 복사돼 있어요 · 안 보이면 붙여넣기');return}catch(e){if(e.name==='AbortError')return}}
+  share(t);
+}
 
 /* 최우영스시야 종로 좌석도 (사진 기준 · 위에서 본 모습, 아래쪽이 매장 입구)
    빨강 일반 테이블 1~9: 오른쪽 1·2·3 → 위쪽 4·5 → 왼쪽 세로 6·7 → 주방 통로 → 8·9
