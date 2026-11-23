@@ -209,6 +209,22 @@ input::placeholder{color:#9c8893;opacity:1}
 .bsum span b{font-family:'Jua';font-weight:400;color:var(--pink);margin-right:3px}
 .btog{display:block;width:100%;border:0;background:none;color:var(--sub);font-size:12.5px;padding:6px 0 4px}
 .board.fold .bl{display:none}
+.jf{position:relative;width:100%;aspect-ratio:1000/1100;background:#fdf3f6;border:1px solid #fbe3ea;border-radius:20px;container-type:inline-size;overflow:hidden}
+.jf .fx{position:absolute}
+.jf .ctr{background:#f3ebe0;border:.4cqw solid #e2cdb4;border-radius:2cqw}
+.jf .door{display:flex;align-items:center;justify-content:center;background:#2f8f4e;color:#fff;border-radius:2cqw;font-family:'Jua';font-size:3.6cqw}
+.jf .lbl{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-family:'Jua';font-size:4.6cqw;color:#8a6d4f;line-height:1.2}
+.jf .lbl.vt{writing-mode:vertical-rl;text-orientation:upright;letter-spacing:.5cqw}
+.jf .lbl.vt small{font-size:2.6cqw;margin-top:2cqw}
+.jf .lbl small{font-family:'Gowun Dodum';font-size:2.8cqw;font-weight:700}
+.jf .pass{display:flex;align-items:center;justify-content:center;text-align:center;font-family:'Jua';font-size:3.8cqw;color:#9a8a92;border:.4cqw dashed #d9c3cc;border-radius:2cqw;line-height:1.2}
+.jf .st{position:absolute;border:.5cqw solid #f0cfdb;background:#fff;border-radius:2.4cqw;font-family:'Jua';font-size:6.4cqw;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;padding:0;color:var(--ink)}
+.jf .st small{font-family:'Gowun Dodum';font-size:2.5cqw;font-weight:700;max-width:96%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.jf .st.u{border-radius:50%;font-size:4.6cqw;background:#eef3ff;border-color:#9fb4e6;color:#2c4a9a}
+.jf .st:not(.u){color:#c8283a}
+.jf .st.on,.jf .st.u.on{background:var(--pink);border-color:var(--pink);color:#fff}
+.jf .st.x{background:#f1edf0;border-style:dashed;color:#b3a7ae}
+.jf .st.x small{color:#e0245e}
 .mtx{margin-top:10px}
 .br .ib{border:0;border-radius:12px;background:var(--pink3);padding:9px;font-size:16px;flex:none}
 .br{gap:6px}
@@ -217,7 +233,7 @@ input::placeholder{color:#9c8893;opacity:1}
 <body>
 <header>
   <button class="inst" id="btnInst">📲 앱 설치<span class="en">Install</span></button>
-  <div class="brand"><b>최우영씨푸드 · 종로점</b>CHOI WOOYOUNG SEAFOOD · JONGNO</div>
+  <div class="brand"><b>최우영스시야 · 종로</b>CHOI WOOYOUNG SUSHIYA · JONGNO</div>
   <h1>예약 콕! 종로 🍣</h1>
   <p id="sub"></p>
   <div><div class="st"><i id="stDot"></i><span id="stTxt">연결 중… · Connecting</span></div><button class="admb" id="btnAdm">🔒 관리자</button></div>
@@ -251,7 +267,7 @@ input::placeholder{color:#9c8893;opacity:1}
 
     <div class="card">
       <div class="q"><span class="n">3</span>자리 & 요청<span class="eni">Table · Request</span><small>몰라도 괜찮아요 · Optional</small></div>
-      <div class="tg" id="tbChips"></div>
+      <div class="jf" id="tbChips"></div>
       <div class="need" id="need"></div>
       <div class="chips" id="rqChips" style="margin-top:12px"></div>
       <input class="in more" id="fMemo" placeholder="✏️ 더 남길 말 · Note">
@@ -276,7 +292,7 @@ input::placeholder{color:#9c8893;opacity:1}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 (function(){
-const STORE='최우영씨푸드 종로점';
+const STORE='최우영스시야 종로점';
 const KEY='jongno_visit_v1',WKEY='jongno_visit_who';
 const DOW=['일','월','화','수','목','금','토'];
 const TIMES=['11:30','12:00','12:30','13:00','17:30','18:00','18:30','19:00','19:30','20:00'];
@@ -293,6 +309,9 @@ const today=()=>ymd(new Date());
 const plus=n=>{const d=new Date();d.setDate(d.getDate()+n);return ymd(d)};
 const noEmoji=s=>s.replace(/^\S+\s/,'');
 const tbs=r=>(r.tables||[]).slice().sort((a,b)=>a-b);
+/* 자리 이름: 1~9 = 일반 테이블, 101~112 = 바 의자 1~12 */
+const lab=n=>n>100?'바 '+(n-100)+'번':n+'번';
+const stx=(a,sep)=>{const t=a.filter(n=>n<100),b=a.filter(n=>n>100).map(n=>n-100);return [t.length?t.join(sep)+'번 테이블':'',b.length?'바 '+b.join(sep)+'번':''].filter(Boolean).join(' + ')};
 
 let list=get(KEY,[]).filter(r=>r.date>=plus(-3));put(KEY,list);
 $('fWho').value=get(WKEY,'');
@@ -352,7 +371,7 @@ function msgDay(date){
   const a=list.filter(r=>r.date===date).sort((x,y)=>(x.time||'99').localeCompare(y.time||'99'));
   if(!a.length)return '';
   let s=`🍣 [종로점 ${fmtDate(date)} 예약] ${a.length}팀 ${a.reduce((t,r)=>t+(+r.pax||0),0)}명\n`;
-  a.forEach(r=>{s+=`\n• ${r.time||'미정'} ${r.name} ${r.pax}명`+(tbs(r).length?` (${tbs(r).join(',')}번)`:'');const d=detail(r,'\n   ');if(d)s+='\n   '+d});
+  a.forEach(r=>{s+=`\n• ${r.time||'미정'} ${r.name} ${r.pax}명`+(tbs(r).length?` (${stx(tbs(r),',')})`:'');const d=detail(r,'\n   ');if(d)s+='\n   '+d});
   return s;
 }
 async function share(text){
@@ -363,7 +382,7 @@ function guestMsg(r){
   const [y,m,d]=r.date.split('-').map(Number),dw=DOW[new Date(y,m-1,d).getDay()];
   return `안녕하세요. ${STORE}입니다.\n${r.name}님, 예약 확인했습니다.\n`+
     `${m}월 ${d}일(${dw}) ${fmtTime(r.time)}, ${r.pax}명으로 예약해드렸습니다.\n`+
-    (tbs(r).length?`${tbs(r).join(', ')}번 테이블로 준비해두겠습니다.\n`:`자리 미리 준비해두겠습니다.\n`)+
+    (tbs(r).length?`${stx(tbs(r),', ')} 자리로 준비해두겠습니다.\n`:`자리 미리 준비해두겠습니다.\n`)+
     `\n인원이나 일정에 변동이 있으시면 연락 부탁드립니다.\n정성껏 준비하겠습니다. 감사합니다.`;
 }
 function sendGuest(r){
@@ -373,17 +392,29 @@ function sendGuest(r){
 }
 function shareDay(date){const t=msgDay(date);if(t)share(t)}
 
-/* 테이블 선택 */
+/* 최우영스시야 종로 좌석도 (사진 기준 · 위에서 본 모습, 아래쪽이 매장 입구)
+   빨강 일반 테이블 1~9: 오른쪽 1·2·3 → 위쪽 4·5 → 왼쪽 세로 6·7 → 주방 통로 → 8·9
+   파랑 바 의자 1~12: 가운데 세로 바 테이블, 오른쪽 1(아래)~6(위), 왼쪽 7(위)~12(아래) */
+const FW=1000,FH=1100,fp=(x,y,w,h)=>`left:${x/FW*100}%;top:${y/FH*100}%;width:${w/FW*100}%;height:${h/FH*100}%`;
+const SEATS={1:[850,770,135,190],2:[850,520,135,170],3:[850,280,135,170],
+  4:[445,40,215,150],5:[210,40,215,150],
+  6:[20,40,150,160],7:[20,215,150,150],8:[20,530,150,160],9:[20,710,150,160],
+  101:[600,810,84,84],102:[600,700,84,84],103:[600,590,84,84],104:[600,480,84,84],105:[600,370,84,84],106:[600,260,84,84],
+  107:[366,260,84,84],108:[366,370,84,84],109:[366,480,84,84],110:[366,590,84,84],111:[366,700,84,84],112:[366,810,84,84]};
+const CAP={4:6,5:6}; /* 6인석 */
+const DECOR=`<div class="fx ctr" style="${fp(462,245,126,665)}"></div>
+<div class="fx lbl vt" style="${fp(462,245,126,665)}">바 테이블</div>
+<div class="fx pass" style="${fp(20,382,150,130)}">통로</div>
+<div class="fx door" style="${fp(790,995,195,70)}">⬇ 매장 입구</div>`;
 function drawTables(){
   const taken={};list.forEach(r=>{if(r.date===cur.date&&r.id!==editId)(r.tables||[]).forEach(t=>{if(!taken[t]||(r.time||'99')<(taken[t].time||'99'))taken[t]=r})});
-  let h='';for(let n=1;n<=TABLES;n++){const on=cur.tables.includes(n),t=taken[n]&&!on;
-    h+=`<button class="${on?'on':''}${t?' x':''}" data-n="${n}">${n}${on?`<small>${cur.time||'선택'}</small>`:t?`<small>${taken[n].time||'미정'} ${esc(taken[n].name)}</small>`:''}</button>`}
-  $('tbChips').innerHTML=h;
+  $('tbChips').innerHTML=DECOR+Object.keys(SEATS).map(k=>{const n=+k,on=cur.tables.includes(n),t=taken[n]&&!on,bar=n>100;
+    return `<button class="st${bar?' u':''}${on?' on':''}${t?' x':''}" style="${fp(...SEATS[k])}" data-n="${n}">${bar?n-100:n}${!bar&&CAP[n]&&!on&&!t?`<small style="color:#8a6d4f">${CAP[n]}인석</small>`:''}${!bar&&on?`<small>${cur.time||'선택'}</small>`:!bar&&t?`<small>${taken[n].time||'미정'}</small><small>${esc(taken[n].name)}</small>`:bar&&t?`<small style="font-size:2.2cqw">${taken[n].time||''}</small>`:''}</button>`}).join('');
   const sel=tbs(cur);
-  $('need').innerHTML=`<span>회색 점선 = 같은 날 다른 예약</span><b class="${sel.length?'ok':''}">${sel.length?sel.join(', ')+'번 선택':'자리 미정'}</b>`;
+  $('need').innerHTML=`<span>점선 = 같은 날 다른 예약</span><b class="${sel.length?'ok':''}">${sel.length?stx(sel,', ')+' 선택':'자리 미정'}</b>`;
 }
 $('tbChips').onclick=e=>{const b=e.target.closest('[data-n]');if(!b)return;const n=+b.dataset.n;
-  if(b.classList.contains('x')&&!confirm(`${n}번은 같은 날 다른 예약이 있어요. 그래도 고를까요?`))return;
+  if(b.classList.contains('x')&&!confirm(`${lab(n)}은 같은 날 다른 예약이 있어요. 그래도 고를까요?`))return;
   cur.tables=cur.tables.includes(n)?cur.tables.filter(x=>x!==n):cur.tables.concat(n);drawTables();saveDraft()};
 
 /* 입력 */
@@ -451,10 +482,10 @@ function drawBoard(){
   h+='<div class="bl">';
   if(!a.length)h+=`<div class="bempty">🌷 ${bDay?'내일':'오늘'}은 아직 예약이 없어요</div>`;
   else{
-    if(nextId){const n=a.find(r=>r.id===nextId),v=diffNow(n);h+=`<div class="nx">👉 다음 손님 <b>${n.time} ${esc(n.name)} ${n.pax}명</b>${tbs(n).length?' · '+tbs(n).join(',')+'번':''} · ${v>0?hm(v)+' 남음':v===0?'지금 도착 시간':'⏰ '+hm(-v)+' 지남'}</div>`}
+    if(nextId){const n=a.find(r=>r.id===nextId),v=diffNow(n);h+=`<div class="nx">👉 다음 손님 <b>${n.time} ${esc(n.name)} ${n.pax}명</b>${tbs(n).length?' · '+stx(tbs(n),','):''} · ${v>0?hm(v)+' 남음':v===0?'지금 도착 시간':'⏰ '+hm(-v)+' 지남'}</div>`}
     h+=`<div class="bsum">${slotsOf(a).map(([t,v])=>`<span><b>${t}</b>${v.n}팀 ${v.p}명</span>`).join('')}</div>`;
     h+=a.map(r=>{const v=diffNow(r),past=v!==null&&v<0,dt=detail(r,' · ');
-      return `<div class="br${r.id===nextId?' next':''}${past?' past':''}"><div class="t">${r.time||'미정'}${v!==null?`<small class="${past?'late':''}">${v>0?hm(v).replace(' ','')+' 뒤':v===0?'지금':v>-60?(-v)+'분 지남':'지남'}</small>`:''}</div><div class="b"><div class="n">${esc(r.name)}<span class="px">${r.pax}명</span></div><div class="m">${tbs(r).length?`<span class="tbp">🪑 ${tbs(r).join('·')}번</span>`:'<span class="tbp no">자리 미정</span>'}${dt?' '+esc(dt):''}${r.who?' · 🙋 '+esc(r.who):''}</div></div>${rowBtns(r)}</div>`}).join('');
+      return `<div class="br${r.id===nextId?' next':''}${past?' past':''}"><div class="t">${r.time||'미정'}${v!==null?`<small class="${past?'late':''}">${v>0?hm(v).replace(' ','')+' 뒤':v===0?'지금':v>-60?(-v)+'분 지남':'지남'}</small>`:''}</div><div class="b"><div class="n">${esc(r.name)}<span class="px">${r.pax}명</span></div><div class="m">${tbs(r).length?`<span class="tbp">🪑 ${stx(tbs(r),'·')}</span>`:'<span class="tbp no">자리 미정</span>'}${dt?' '+esc(dt):''}${r.who?' · 🙋 '+esc(r.who):''}</div></div>${rowBtns(r)}</div>`}).join('');
     h+=`<button class="btog" data-share="${d}">💌 ${bDay?'내일':'오늘'} 예약 리스트 카톡 공유</button>`;
   }
   h+='</div>';
@@ -489,7 +520,7 @@ function drawCal(M){
     h+=`<button class="c${d.getMonth()!==mo?' out':''}${k===today()?' today':''}${k===selDay?' sel':''}${d.getDay()===0?' sun':''}${d.getDay()===6?' sat':''}" data-day="${k}"><span class="n">${d.getDate()}</span>${a.length?`<span class="k">${a.length}팀</span>`+sl.slice(0,2).map(([t,v])=>`<span class="t">${t}${v.n>1?' ×'+v.n:''}</span>`).join('')+(sl.length>2?`<span class="t">+${sl.length-2}</span>`:''):''}</button>`}
   return h+'</div></div>';
 }
-const item=r=>`<div class="it" data-id="${r.id}"><div class="tm">${r.time||'미정'}</div><div class="bd"><div class="nm">${esc(r.name)} · ${r.pax}명</div><div class="mt">${tbs(r).length?`<span class="tbp">🪑 ${tbs(r).join('·')}번</span>`:'<span class="tbp no">자리 미정</span>'}${detail(r,' · ')?' '+esc(detail(r,' · ')):''}${r.who?' · 🙋 '+esc(r.who):''}</div></div>${rowBtns(r)}</div>`;
+const item=r=>`<div class="it" data-id="${r.id}"><div class="tm">${r.time||'미정'}</div><div class="bd"><div class="nm">${esc(r.name)} · ${r.pax}명</div><div class="mt">${tbs(r).length?`<span class="tbp">🪑 ${stx(tbs(r),'·')}</span>`:'<span class="tbp no">자리 미정</span>'}${detail(r,' · ')?' '+esc(detail(r,' · ')):''}${r.who?' · 🙋 '+esc(r.who):''}</div></div>${rowBtns(r)}</div>`;
 function drawList(){
   const M=byDay();let h=drawCal(M);
   if(selDay&&selDay!==today()){const a=M[selDay]||[];
